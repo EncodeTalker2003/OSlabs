@@ -11,6 +11,8 @@
 void	cputchar(int c);
 int	getchar(void);
 int	iscons(int fd);
+void set_fg_col(int col);
+void set_bg_col(int col);
 
 // lib/printfmt.c
 void	printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...);

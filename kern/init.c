@@ -10,6 +10,13 @@
 #include <kern/kclock.h>
 
 
+void 
+call_l1e8(void)
+{
+	unsigned int i = 0x00646c72;
+    cprintf("H%x Wo%s", 57616, &i);
+}
+
 void
 i386_init(void)
 {
@@ -25,6 +32,9 @@ i386_init(void)
 	cons_init();
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
+	
+
+	//call_l1e8();
 
 	// Lab 2 memory management initialization functions
 	mem_init();
