@@ -17,6 +17,10 @@ call_l1e8(void)
     cprintf("H%x Wo%s", 57616, &i);
 }
 
+void brk() {
+	cprintf("brk\n");
+}
+
 void
 i386_init(void)
 {
@@ -36,8 +40,12 @@ i386_init(void)
 
 	//call_l1e8();
 
+	//brk();
+
 	// Lab 2 memory management initialization functions
 	mem_init();
+
+	//brk();
 
 	// Drop into the kernel monitor.
 	while (1)
