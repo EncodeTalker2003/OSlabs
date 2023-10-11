@@ -10,6 +10,7 @@
 #include <kern/console.h>
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
+#include <kern/pmap.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
@@ -25,6 +26,9 @@ static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "backtrace", "Display information about the stack trace", mon_backtrace },
+	{ "showmappings", "Display the physical page mappingsthat apply to a particular range of virtual/linear addresses.", mon_showmappings },
+	{ "setperm", "Explicitly set, clear, or change the permissions of any mapping.", mon_setperm },
+	{ "dumpmem", "Dump the contents of a range of memory given either a virtual or physical address range.", mon_dumpmem },
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -80,6 +84,109 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+int 
+mon_showmappings(int argc, char **argv, struct Trapframe *tf)
+{
+	if (argc != 3) {
+		cprintf("Usage: showmappings [start] [end]\n");
+		return 0;
+	}
+	uintptr_t start_va = (uintptr_t)strtol(argv[1], NULL, 0);
+	uintptr_t end_va = (uintptr_t)strtol(argv[2], NULL, 0);
+	if ((start_va % PGSIZE) || (end_va % PGSIZE)) {
+		cprintf("showmappings error: start and end must be page aligned\n");
+		return 0;
+	}
+	if (start_va > end_va) {
+		cprintf("showmappings error: start must be less than end\n");
+	}
+	while (start_va <= end_va) {
+		pte_t *pte = pgdir_walk(kern_pgdir, (void *)start_va, 0);
+		if ((!pte) || (!(*pte & PTE_P))) {
+			cprintf("VA:0x%08x: unmapped\n", start_va);
+		} else {
+			cprintf("VA:0x%08x -> PA:0x%08x ", start_va, PTE_ADDR(*pte));
+			if (*pte & PTE_U) {
+				cputchar('U');
+			} else {
+				cputchar('-');
+			}
+			if (*pte & PTE_W) {
+				cputchar('W');
+			} else {
+				cputchar('-');
+			}
+			cputchar('\n');
+		}
+		start_va += PGSIZE;
+	}
+	return 0;
+}
+
+int 
+mon_setperm(int argc, char **argv, struct Trapframe *tf) {
+	if (argc != 4) {
+		cprintf("Usage: setperm [VADDR] [U|W] [0|1]\n");
+		return 0;
+	}
+	if ((argv[2][0] != 'U' && argv[2][0] != 'W') || (argv[3][0] != '0' && argv[3][0] != '1')) {
+		cprintf("Usage: setperm [VADDR] [U|W] [0|1]\n");
+		return 0;
+	}
+	uintptr_t va = (uintptr_t)strtol(argv[1], NULL, 0);
+	pte_t *pte = pgdir_walk(kern_pgdir, (void *)va, 0);
+	if (!pte) {
+		cprintf("setperm error: VA:0x%08x is not mapped\n", va);
+		return 0;
+	}
+	pte_t perm_mod = 0;
+	if (argv[2][0] == 'U') {
+		perm_mod = PTE_U;
+	} else {
+		perm_mod = PTE_W;
+	}
+	if (argv[3][0] == '1') {
+		*pte |= perm_mod;
+	} else {
+		*pte &= ~perm_mod;
+	}
+	return 0;
+}
+
+int 
+mon_dumpmem(int argc, char **argv, struct Trapframe *tf) {
+	if (argc != 4) {
+		cprintf("Usage: dumpmem [V|P] [Start] [length]\n");
+		return 0;
+	}
+	if ((argv[1][0] != 'V' && argv[1][0] != 'P')) {
+		cprintf("Usage: dumpmem [V|P] [Start] [length]\n");
+		return 0;
+	}
+	uintptr_t start_va = (uintptr_t)strtol(argv[2], NULL, 0);
+	uint32_t length = (uint32_t)strtol(argv[3], NULL, 0);
+	if (argv[1][0] == 'P') {
+		if (start_va + length > PGSIZE * npages) {
+			cprintf("dumpmem error: address overflow\n");
+			return 0;
+		}
+		start_va = (uintptr_t)KADDR((physaddr_t)start_va);
+	}
+	for (int i = 0; i < length; i++) {
+		cprintf("VADDR 0x%08x: 0x", start_va + i);
+		for (int j = 3; j >= 0; j--) {
+			void* nowptr = (void *)(start_va + i * 4);
+			pte_t *pte = pgdir_walk(kern_pgdir, nowptr, 0);
+			if ((!pte) || (!(*pte & PTE_P))) {
+				cprintf("??");
+			} else {
+				cprintf("%02x", *((uint8_t *)nowptr + j));
+			}
+		}
+		cprintf("\n");
+	}
+	return 0;
+}
 
 /***** Kernel monitor command interpreter *****/
 
