@@ -47,6 +47,9 @@ delay(void)
 
 static bool serial_exists;
 
+static int fg_col = 0x7;
+static int bg_col = 0x0;
+
 static int
 serial_proc_data(void)
 {
@@ -157,7 +160,17 @@ cga_init(void)
 	crt_pos = pos;
 }
 
+static int trans_col[] = {0x0, 0x4, 0x2, 0xe, 0x1, 0x5, 0x3, 0x7};
 
+void 
+set_fg_col(int col) {
+	fg_col = trans_col[col - 30];
+}
+
+void 
+set_bg_col(int col) {
+	bg_col = trans_col[col - 40];
+}
 
 static void
 cga_putc(int c)

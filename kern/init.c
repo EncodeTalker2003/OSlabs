@@ -11,7 +11,6 @@
 #include <kern/env.h>
 #include <kern/trap.h>
 
-
 void
 i386_init(void)
 {
@@ -27,6 +26,11 @@ i386_init(void)
 	cons_init();
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
+	
+
+	//call_l1e8();
+
+	//brk();
 
 	// Lab 2 memory management initialization functions
 	mem_init();
