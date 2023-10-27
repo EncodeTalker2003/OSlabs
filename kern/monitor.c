@@ -30,6 +30,8 @@ static struct Command commands[] = {
 	{ "showmappings", "Display the physical page mappingsthat apply to a particular range of virtual/linear addresses.", mon_showmappings },
 	{ "setperm", "Explicitly set, clear, or change the permissions of any mapping.", mon_setperm },
 	{ "dumpmem", "Dump the contents of a range of memory given either a virtual or physical address range.", mon_dumpmem },
+	{ "continue", "Continue execution from the current location.", mon_continue },
+	{ "stepi", "Single step one instruction at a time through the code.", mon_stepi },
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -188,6 +190,25 @@ mon_dumpmem(int argc, char **argv, struct Trapframe *tf) {
 	}
 	return 0;
 }
+
+int 
+mon_continue(int argc, char **argv, struct Trapframe *tf) {
+    if (!(tf && (tf->tf_trapno == T_DEBUG || tf->tf_trapno == T_BRKPT) && 
+          ((tf->tf_cs & 3) == 3)))
+        return 0;
+    tf->tf_eflags &= ~FL_TF;
+    return -1;
+}
+
+int 
+mon_stepi(int argc, char **argv, struct Trapframe *tf) {
+    if (!(tf && (tf->tf_trapno == T_DEBUG || tf->tf_trapno == T_BRKPT) && 
+          ((tf->tf_cs & 3) == 3)))
+        return 0;
+    tf->tf_eflags |= FL_TF;
+    return -1;
+}
+
 
 /***** Kernel monitor command interpreter *****/
 
