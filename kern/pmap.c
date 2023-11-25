@@ -277,7 +277,11 @@ mem_init_mp(void)
 	//             Known as a "guard page".
 	//     Permissions: kernel RW, user NONE
 	//
-	// LAB 4: Your code here:
+	// LAB 4: Your code here:	
+	for (int i = 0; i < NCPU; i++) {
+		uintptr_t kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+		boot_map_region(kern_pgdir, kstacktop_i - KSTKSIZE, KSTKSIZE, PADDR(percpu_kstacks[i]), PTE_W);
+	}
 
 }
 
@@ -323,6 +327,10 @@ page_init(void)
 	//cprintf("sasasa %u %u\n", IOPHYSMEM / PGSIZE, kernel_end);
 	
 	for (i = 0; i < npages; i++) {
+		if(i == MPENTRY_PADDR/PGSIZE){
+            pages[i].pp_ref = 1;
+            continue;
+        }
 		pages[i].pp_ref = 0;
 		if ((i == 0) || ((i >= IOPHYSMEM / PGSIZE) && i < kernel_end)) {
 			pages[i].pp_link = NULL;
@@ -592,7 +600,15 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+	size = ROUNDUP(size, PGSIZE);
+	if (base + size > MMIOLIM) {
+		panic("mmio_map_region: overflow MMIOLIM");
+	}
+	boot_map_region(kern_pgdir, base, size, pa, PTE_PCD | PTE_PWT | PTE_W);
+	void *ret = (void *)base;
+	base += size;
+	return ret;
+
 }
 
 static uintptr_t user_mem_check_addr;
