@@ -39,8 +39,8 @@ ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 		return ret;
 	}
 	// uncomment this line if you want to do the `sfork` challenge
-	const volatile struct Env *thisenv = envs + ENVX(sys_getenvid());
-	
+	// const volatile struct Env *thisenv = envs + ENVX(sys_getenvid());
+
 	if (from_env_store != NULL) {
 		*from_env_store = thisenv->env_ipc_from;
 	}

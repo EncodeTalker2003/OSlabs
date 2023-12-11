@@ -199,5 +199,4 @@ sfork(void)
 		panic("fork: sys_env_set_status failed: %e", ret);
 	}
 	return envid;
-
 }
